@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Issyemen Carnaval — Spectator</title>
+
+    <!-- Tailwind (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: [
+                "ui-sans-serif",
+                "system-ui",
+                "-apple-system",
+                "Segoe UI",
+                "Roboto",
+                "Helvetica",
+                "Arial",
+                "Noto Sans",
+                "Apple Color Emoji",
+                "Segoe UI Emoji",
+              ],
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- CSV parser -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  </head>
+  <body class="min-h-dvh bg-slate-950 text-slate-100 selection:bg-indigo-500/30">
+    <div class="mx-auto max-w-6xl px-4 pb-10 pt-4 md:pt-6">
+      <header class="rounded-3xl bg-slate-900/35 ring-1 ring-slate-800">
+        <div class="relative overflow-hidden rounded-3xl">
+          <div
+            class="absolute inset-0 bg-[radial-gradient(circle_at_30%_10%,rgba(99,102,241,0.22),transparent_55%),radial-gradient(circle_at_75%_35%,rgba(16,185,129,0.16),transparent_55%)]"
+            aria-hidden="true"
+          ></div>
+          <div class="relative px-4 py-4 sm:px-6 sm:py-5">
+            <div class="flex flex-col items-center justify-between gap-3 sm:flex-row">
+              <div class="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row sm:items-center">
+                <div class="flex items-center gap-3">
+                  <div class="rounded-2xl bg-white/95 p-2 ring-1 ring-white/30">
+                    <img
+                      src="digital_identity/UTM%20ISS-YEMEN%20LOGO.png"
+                      alt="UTM ISS-YEMEN"
+                      class="h-11 w-auto sm:h-12"
+                      loading="eager"
+                      decoding="async"
+                    />
+                  </div>
+                  <div class="rounded-2xl bg-white/95 p-2 ring-1 ring-white/30">
+                    <img
+                      src="digital_identity/ISSYEMEN%20CARNAVAL%2026%20-%20LOGO.jpg"
+                      alt="ISSYEMEN CARNAVAL 26"
+                      class="h-11 w-auto sm:h-12"
+                      loading="eager"
+                      decoding="async"
+                    />
+                  </div>
+                </div>
+
+                <div class="text-center sm:text-left">
+                  <div class="text-sm font-semibold tracking-wide text-slate-200">UTM ISS-YEMEN</div>
+                  <div class="text-xl font-extrabold tracking-tight text-white sm:text-2xl">
+                    ISSYEMEN CARNAVAL 26
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex w-full items-center justify-center gap-2 sm:w-auto sm:justify-end">
+                <div
+                  id="statusPill"
+                  class="hidden items-center gap-2 rounded-full bg-slate-950/35 px-3 py-1 text-xs ring-1 ring-slate-700/60 md:flex"
+                  aria-live="polite"
+                >
+                  <span class="inline-block size-2 rounded-full bg-slate-500" id="statusDot"></span>
+                  <span id="statusText">Idle</span>
+                </div>
+                <button
+                  id="refreshBtn"
+                  type="button"
+                  class="rounded-xl bg-indigo-500/20 px-4 py-2 text-sm font-semibold text-indigo-50 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70"
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <nav class="mt-4 flex gap-2">
+        <a
+          id="navSwimming"
+          href="#/swimming"
+          class="flex-1 rounded-xl bg-slate-900/50 px-4 py-3 text-center text-sm font-semibold ring-1 ring-slate-800 hover:bg-slate-900/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70"
+          >Swimming</a
+        >
+        <a
+          id="navRunning"
+          href="#/running"
+          class="flex-1 rounded-xl bg-slate-900/50 px-4 py-3 text-center text-sm font-semibold ring-1 ring-slate-800 hover:bg-slate-900/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70"
+          >Running</a
+        >
+      </nav>
+
+      <main class="mt-4">
+        <!-- 16:9 friendly "broadcast" frame -->
+        <section
+          class="relative overflow-hidden rounded-2xl bg-slate-900/40 ring-1 ring-slate-800"
+        >
+          <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(99,102,241,0.18),transparent_55%),radial-gradient(circle_at_80%_30%,rgba(16,185,129,0.12),transparent_55%)]"></div>
+
+          <div class="relative p-3 sm:p-4 md:p-6">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <h1 id="viewTitle" class="truncate text-lg font-semibold md:text-xl">
+                    Swimming
+                  </h1>
+                  <span
+                    id="viewChip"
+                    class="rounded-full bg-indigo-500/15 px-2 py-1 text-xs font-semibold text-indigo-100 ring-1 ring-indigo-400/30"
+                    >#/swimming</span
+                  >
+                </div>
+                <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                  <span id="lastUpdated">Last updated: —</span>
+                </div>
+              </div>
+            </div>
+
+            <div
+              id="filterBar"
+              class="mt-3 hidden flex-wrap items-center gap-2 rounded-2xl bg-slate-950/30 px-3 py-2 text-xs ring-1 ring-slate-800"
+            >
+              <span class="font-semibold text-slate-300">Filter:</span>
+              <div id="filterChips" class="flex flex-wrap items-center gap-2"></div>
+              <button
+                id="clearFiltersBtn"
+                type="button"
+                class="ml-auto rounded-xl bg-slate-800/60 px-3 py-1 font-semibold text-slate-100 ring-1 ring-slate-700 hover:bg-slate-800/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70"
+              >
+                Clear
+              </button>
+            </div>
+
+            <!-- Layout: mobile stacked, desktop 2-up; fits well in 16:9 when projected -->
+            <div class="mt-4 grid gap-3 md:grid-cols-2 md:gap-4">
+              <section class="rounded-2xl bg-slate-950/40 ring-1 ring-slate-800">
+                <div class="flex items-center justify-between gap-2 border-b border-slate-800 px-4 py-3">
+                  <h2 class="text-sm font-semibold">Heat / Current</h2>
+                  <span class="text-xs text-slate-400" id="heatCount">—</span>
+                </div>
+                <div class="p-2">
+                  <div class="overflow-x-auto">
+                    <table class="min-w-full text-left text-xs">
+                      <thead class="text-slate-300">
+                        <tr class="border-b border-slate-800/80">
+                          <th class="px-3 py-2 font-semibold">Name</th>
+                          <th class="px-3 py-2 font-semibold">Line</th>
+                          <th class="px-3 py-2 font-semibold">Round</th>
+                          <th class="px-3 py-2 font-semibold">Group</th>
+                          <th class="px-3 py-2 font-semibold">Score (s)</th>
+                          <th class="px-3 py-2 font-semibold">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody id="heatBody" class="text-slate-100"></tbody>
+                    </table>
+                  </div>
+                  <div id="heatEmpty" class="hidden px-3 py-6 text-center text-xs text-slate-400">
+                    No heat rows found.
+                  </div>
+                </div>
+              </section>
+
+              <section class="rounded-2xl bg-slate-950/40 ring-1 ring-slate-800">
+                <div class="flex items-center justify-between gap-2 border-b border-slate-800 px-4 py-3">
+                  <h2 class="text-sm font-semibold">Leaderboard</h2>
+                  <span class="text-xs text-slate-400" id="leaderCount">—</span>
+                </div>
+                <div class="p-2">
+                  <div class="overflow-x-auto">
+                    <table class="min-w-full text-left text-xs">
+                      <thead class="text-slate-300">
+                        <tr class="border-b border-slate-800/80">
+                          <th class="px-3 py-2 font-semibold">Rank</th>
+                          <th class="px-3 py-2 font-semibold">Name</th>
+                          <th class="px-3 py-2 font-semibold">Average Score (s)</th>
+                          <th class="px-3 py-2 font-semibold">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody id="leaderBody" class="text-slate-100"></tbody>
+                    </table>
+                  </div>
+                  <div
+                    id="leaderEmpty"
+                    class="hidden px-3 py-6 text-center text-xs text-slate-400"
+                  >
+                    No leaderboard rows found.
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div
+              id="errorBox"
+              class="mt-4 hidden rounded-2xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-xs text-rose-100"
+              role="alert"
+            ></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      // ---- Config (from data_specification.md) ----
+      const SHEETS = {
+        swimming:
+          "https://docs.google.com/spreadsheets/d/e/2PACX-1vS-13Ijo8MGALhB5farVGJq2I2I9cKEL570IYw89tVJ8IbPX_rKOOOCdZV5IbOS7_KLKN4GVofsGAKn/pub?gid=1242237186&single=true&output=csv",
+        running:
+          "https://docs.google.com/spreadsheets/d/e/2PACX-1vS-13Ijo8MGALhB5farVGJq2I2I9cKEL570IYw89tVJ8IbPX_rKOOOCdZV5IbOS7_KLKN4GVofsGAKn/pub?gid=1425156962&single=true&output=csv",
+      };
+
+      // ---- DOM ----
+      const el = {
+        refreshBtn: document.getElementById("refreshBtn"),
+        statusPill: document.getElementById("statusPill"),
+        statusDot: document.getElementById("statusDot"),
+        statusText: document.getElementById("statusText"),
+        navSwimming: document.getElementById("navSwimming"),
+        navRunning: document.getElementById("navRunning"),
+        viewTitle: document.getElementById("viewTitle"),
+        viewChip: document.getElementById("viewChip"),
+        lastUpdated: document.getElementById("lastUpdated"),
+        filterBar: document.getElementById("filterBar"),
+        filterChips: document.getElementById("filterChips"),
+        clearFiltersBtn: document.getElementById("clearFiltersBtn"),
+        heatBody: document.getElementById("heatBody"),
+        heatEmpty: document.getElementById("heatEmpty"),
+        leaderBody: document.getElementById("leaderBody"),
+        leaderEmpty: document.getElementById("leaderEmpty"),
+        heatCount: document.getElementById("heatCount"),
+        leaderCount: document.getElementById("leaderCount"),
+        errorBox: document.getElementById("errorBox"),
+      };
+
+      // ---- State ----
+      let currentView = "swimming";
+      let currentAbort = null;
+      let rawHeatRows = [];
+      let rawLeaderRows = [];
+      let avgScoreByName = new Map();
+
+      const filters = {
+        name: null,
+        status: null,
+      };
+
+      function setNavActive(view) {
+        const base =
+          "flex-1 rounded-xl px-4 py-3 text-center text-sm font-semibold ring-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70";
+        const active = " bg-indigo-500/15 text-indigo-100 ring-indigo-400/30";
+        const inactive = " bg-slate-900/50 text-slate-100 ring-slate-800 hover:bg-slate-900/80";
+        el.navSwimming.className = base + (view === "swimming" ? active : inactive);
+        el.navRunning.className = base + (view === "running" ? active : inactive);
+      }
+
+      function setStatus(kind, text) {
+        // kind: idle | ok | loading | error
+        el.statusPill.classList.remove("hidden");
+        let dot = "bg-slate-500";
+        if (kind === "ok") dot = "bg-emerald-400";
+        if (kind === "loading") dot = "bg-amber-300";
+        if (kind === "error") dot = "bg-rose-400";
+        el.statusDot.className = "inline-block size-2 rounded-full " + dot;
+        el.statusText.textContent = text;
+      }
+
+      function showError(message) {
+        if (!message) {
+          el.errorBox.classList.add("hidden");
+          el.errorBox.textContent = "";
+          return;
+        }
+        el.errorBox.classList.remove("hidden");
+        el.errorBox.textContent = message;
+      }
+
+      function nowTime() {
+        return new Date();
+      }
+
+      function fmtTime(d) {
+        try {
+          return new Intl.DateTimeFormat(undefined, {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }).format(d);
+        } catch {
+          return d.toLocaleTimeString();
+        }
+      }
+
+      function safeText(v) {
+        return String(v ?? "").trim();
+      }
+
+      function normalizeKey(v) {
+        return safeText(v).toLowerCase();
+      }
+
+      function computeAvgScoreMap(heatRows) {
+        const sums = new Map(); // nameKey -> { name, sum, n }
+        for (const r of heatRows) {
+          const name = safeText(r?.[0]);
+          if (!name) continue;
+          const score = Number.parseFloat(String(r?.[4] ?? "").trim());
+          if (!Number.isFinite(score)) continue;
+          const k = normalizeKey(name);
+          const cur = sums.get(k) || { name, sum: 0, n: 0 };
+          cur.sum += score;
+          cur.n += 1;
+          sums.set(k, cur);
+        }
+        const out = new Map();
+        for (const [k, v] of sums.entries()) {
+          out.set(k, v.n ? v.sum / v.n : null);
+        }
+        return out;
+      }
+
+      function matchesFilters({ name, status }) {
+        if (filters.name) {
+          if (normalizeKey(name) !== filters.name) return false;
+        }
+        if (filters.status) {
+          if (normalizeKey(status) !== filters.status) return false;
+        }
+        return true;
+      }
+
+      function setFilterName(name) {
+        const k = normalizeKey(name);
+        filters.name = filters.name === k ? null : k;
+        applyFiltersAndRender();
+      }
+
+      function setFilterStatus(status) {
+        const k = normalizeKey(status);
+        filters.status = filters.status === k ? null : k;
+        applyFiltersAndRender();
+      }
+
+      function clearFilters() {
+        filters.name = null;
+        filters.status = null;
+        applyFiltersAndRender();
+      }
+
+      function renderFilterChips() {
+        const chips = [];
+        if (filters.name) chips.push({ type: "name", label: filters.name });
+        if (filters.status) chips.push({ type: "status", label: filters.status });
+
+        el.filterChips.innerHTML = "";
+        el.filterBar.classList.toggle("hidden", chips.length === 0);
+        if (!chips.length) return;
+
+        for (const c of chips) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className =
+            "inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-3 py-1 font-semibold text-indigo-100 ring-1 ring-indigo-500/20 hover:bg-indigo-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70";
+          btn.textContent = c.type === "name" ? `Name: ${c.label}` : `Status: ${c.label}`;
+          btn.addEventListener("click", () => {
+            if (c.type === "name") filters.name = null;
+            if (c.type === "status") filters.status = null;
+            applyFiltersAndRender();
+          });
+          el.filterChips.appendChild(btn);
+        }
+      }
+
+      function makeCell(text, extra = "") {
+        const td = document.createElement("td");
+        td.className = "px-3 py-2 align-middle " + extra;
+        td.textContent = text;
+        return td;
+      }
+
+      function badgeForStatus(status) {
+        const s = safeText(status).toLowerCase();
+        let cls = "bg-slate-500/10 text-slate-100 ring-slate-500/20";
+        if (s === "completed" || s === "winner") cls = "bg-emerald-500/10 text-emerald-100 ring-emerald-500/20";
+        else if (s === "coming" || s === "ready") cls = "bg-indigo-500/10 text-indigo-100 ring-indigo-500/20";
+        else if (s === "canceled" || s === "withdrawn" || s === "out") cls = "bg-rose-500/10 text-rose-100 ring-rose-500/20";
+        // "Live" not needed per request, but if it appears, treat as amber.
+        else if (s === "live" || s === "qualifier") cls = "bg-amber-500/10 text-amber-100 ring-amber-500/20";
+        const span = document.createElement("span");
+        span.className = "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 " + cls;
+        span.textContent = safeText(status) || "—";
+        return span;
+      }
+
+      function nameButton(name, { maxWClass } = {}) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.filterName = normalizeKey(name);
+        btn.className =
+          "text-left font-semibold text-slate-100 underline decoration-slate-500 underline-offset-4 hover:decoration-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70 rounded-md";
+        if (maxWClass) btn.className += " " + maxWClass + " truncate";
+        btn.textContent = safeText(name) || "—";
+        return btn;
+      }
+
+      function statusButton(status) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.filterStatus = normalizeKey(status);
+        btn.className = "rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70";
+        btn.appendChild(badgeForStatus(status));
+        return btn;
+      }
+
+      function renderHeat(rows) {
+        el.heatBody.innerHTML = "";
+        const clean = rows.filter((r) => r.some((x) => safeText(x)));
+        el.heatCount.textContent = clean.length ? `${clean.length} row(s)` : "—";
+        if (!clean.length) {
+          el.heatEmpty.classList.remove("hidden");
+          return;
+        }
+        el.heatEmpty.classList.add("hidden");
+
+        for (const r of clean) {
+          const tr = document.createElement("tr");
+          tr.className = "border-b border-slate-900/60 last:border-b-0";
+
+          const nameTd = document.createElement("td");
+          nameTd.className = "px-3 py-2 align-middle max-w-[12rem]";
+          nameTd.appendChild(nameButton(r[0], { maxWClass: "max-w-[12rem]" }));
+          tr.appendChild(nameTd);
+          tr.appendChild(makeCell(safeText(r[1]) || "—", "text-slate-200"));
+          tr.appendChild(makeCell(safeText(r[2]) || "—", "text-slate-200"));
+          tr.appendChild(makeCell(safeText(r[3]) || "—", "text-slate-200"));
+          tr.appendChild(makeCell(safeText(r[4]) || "—", "font-semibold text-slate-100"));
+
+          const td = document.createElement("td");
+          td.className = "px-3 py-2";
+          td.appendChild(statusButton(r[5]));
+          tr.appendChild(td);
+
+          el.heatBody.appendChild(tr);
+        }
+      }
+
+      function renderLeaderboard(rows) {
+        el.leaderBody.innerHTML = "";
+        const clean = rows.filter((r) => r.some((x) => safeText(x)));
+        el.leaderCount.textContent = clean.length ? `${clean.length} row(s)` : "—";
+        if (!clean.length) {
+          el.leaderEmpty.classList.remove("hidden");
+          return;
+        }
+        el.leaderEmpty.classList.add("hidden");
+
+        // Sort by rank when possible (Rank is column 1 in right table).
+        clean.sort((a, b) => {
+          const ra = Number.parseFloat(String(a[1] ?? "").trim());
+          const rb = Number.parseFloat(String(b[1] ?? "").trim());
+          if (Number.isFinite(ra) && Number.isFinite(rb)) return ra - rb;
+          if (Number.isFinite(ra)) return -1;
+          if (Number.isFinite(rb)) return 1;
+          return String(a[0] ?? "").localeCompare(String(b[0] ?? ""));
+        });
+
+        for (const r of clean) {
+          const tr = document.createElement("tr");
+          tr.className = "border-b border-slate-900/60 last:border-b-0";
+
+          tr.appendChild(makeCell(safeText(r[1]) || "—", "font-semibold text-slate-100"));
+          const nameTd = document.createElement("td");
+          nameTd.className = "px-3 py-2 align-middle max-w-[14rem]";
+          nameTd.appendChild(nameButton(r[0], { maxWClass: "max-w-[14rem]" }));
+          tr.appendChild(nameTd);
+
+          const avg = avgScoreByName.get(normalizeKey(r[0]));
+          tr.appendChild(
+            makeCell(
+              Number.isFinite(avg) ? avg.toFixed(2) : "—",
+              "font-semibold text-slate-100"
+            )
+          );
+
+          const td = document.createElement("td");
+          td.className = "px-3 py-2";
+          td.appendChild(statusButton(r[2]));
+          tr.appendChild(td);
+
+          el.leaderBody.appendChild(tr);
+        }
+      }
+
+      function applyFiltersAndRender() {
+        renderFilterChips();
+
+        const heat = rawHeatRows.filter((r) =>
+          matchesFilters({ name: r?.[0], status: r?.[5] })
+        );
+        const leader = rawLeaderRows.filter((r) =>
+          matchesFilters({ name: r?.[0], status: r?.[2] })
+        );
+
+        renderHeat(heat);
+        renderLeaderboard(leader);
+      }
+
+      function splitTwoTables(matrix) {
+        // Expect columns: [0..5] left table, [6] empty separator, [7..9] right table
+        const heat = [];
+        const leader = [];
+        for (const row of matrix) {
+          if (!row || !row.length) continue;
+          heat.push([row[0], row[1], row[2], row[3], row[4], row[5]]);
+          leader.push([row[7], row[8], row[9]]);
+        }
+        return { heat, leader };
+      }
+
+      async function fetchCsv(url, { signal } = {}) {
+        const u = new URL(url);
+        u.searchParams.set("_ts", String(Date.now()));
+        const res = await fetch(u.toString(), {
+          method: "GET",
+          mode: "cors",
+          cache: "no-store",
+          signal,
+        });
+        if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
+        return await res.text();
+      }
+
+      async function loadView(view, { reason = "auto" } = {}) {
+        const url = SHEETS[view];
+        if (!url) return;
+
+        showError("");
+        setStatus("loading", reason === "manual" ? "Refreshing…" : "Loading…");
+
+        // Abort in-flight request if switching views fast.
+        if (currentAbort) currentAbort.abort();
+        currentAbort = new AbortController();
+
+        try {
+          const csvText = await fetchCsv(url, { signal: currentAbort.signal });
+          const parsed = Papa.parse(csvText, {
+            skipEmptyLines: true,
+          });
+          if (parsed.errors?.length) {
+            throw new Error(parsed.errors[0]?.message || "CSV parse error");
+          }
+
+          const rows = Array.isArray(parsed.data) ? parsed.data : [];
+          // Drop header row if it matches expected.
+          const bodyRows =
+            rows.length &&
+            String(rows[0]?.[0] ?? "").trim().toLowerCase() === "name" &&
+            String(rows[0]?.[1] ?? "").trim().toLowerCase() === "line"
+              ? rows.slice(1)
+              : rows;
+
+          const { heat, leader } = splitTwoTables(bodyRows);
+          rawHeatRows = heat;
+          rawLeaderRows = leader;
+          avgScoreByName = computeAvgScoreMap(rawHeatRows);
+          applyFiltersAndRender();
+
+          const t = nowTime();
+          el.lastUpdated.textContent = `Last updated: ${fmtTime(t)}`;
+          setStatus("ok", "Up to date");
+        } catch (e) {
+          if (e?.name === "AbortError") return;
+          setStatus("error", "Load failed");
+          showError(
+            `Could not load data for "${view}". Check the published CSV link and network.\n\n${String(
+              e?.message || e
+            )}`
+          );
+        }
+      }
+
+      function parseRoute() {
+        // Supported: #/swimming, #/running, and anything under it (#/swimming/...)
+        const raw = String(location.hash || "#/swimming");
+        const parts = raw.replace(/^#\/?/, "").split("/").filter(Boolean);
+        const view = parts[0] === "running" ? "running" : "swimming";
+        return { view, raw };
+      }
+
+      function applyRoute() {
+        const { view, raw } = parseRoute();
+        currentView = view;
+
+        el.viewTitle.textContent = view === "running" ? "Running" : "Swimming";
+        el.viewChip.textContent = "#" + raw.replace(/^#/, "");
+        setNavActive(view);
+
+        // Load immediately on route change.
+        loadView(view, { reason: "route" });
+      }
+
+      // ---- Boot ----
+      window.addEventListener("hashchange", applyRoute);
+      el.refreshBtn.addEventListener("click", () => loadView(currentView, { reason: "manual" }));
+      el.clearFiltersBtn.addEventListener("click", clearFilters);
+
+      // Event delegation: click-to-filter on names/statuses in both tables.
+      const onFilterClick = (e) => {
+        const t = e.target?.closest?.("[data-filter-name],[data-filter-status]");
+        if (!t) return;
+        if (t.dataset.filterName) setFilterName(t.dataset.filterName);
+        if (t.dataset.filterStatus) setFilterStatus(t.dataset.filterStatus);
+      };
+      el.heatBody.addEventListener("click", onFilterClick);
+      el.leaderBody.addEventListener("click", onFilterClick);
+
+      if (!location.hash) location.hash = "#/swimming";
+      applyRoute();
+    </script>
+  </body>
+</html>
+
