@@ -156,27 +156,13 @@
             <div class="mt-4 grid gap-3 md:grid-cols-2 md:gap-4">
               <section class="rounded-2xl bg-slate-950/40 ring-1 ring-slate-800">
                 <div class="flex items-center justify-between gap-2 border-b border-slate-800 px-4 py-3">
-                  <h2 class="text-sm font-semibold">Heat / Current</h2>
+                  <h2 class="text-sm font-semibold">Rounds</h2>
                   <span class="text-xs text-slate-400" id="heatCount">—</span>
                 </div>
                 <div class="p-2">
-                  <div class="overflow-x-auto">
-                    <table class="min-w-full text-left text-xs">
-                      <thead class="text-slate-300">
-                        <tr class="border-b border-slate-800/80">
-                          <th class="px-3 py-2 font-semibold">Name</th>
-                          <th class="px-3 py-2 font-semibold">Line</th>
-                          <th class="px-3 py-2 font-semibold">Round</th>
-                          <th class="px-3 py-2 font-semibold">Group</th>
-                          <th class="px-3 py-2 font-semibold">Score (s)</th>
-                          <th class="px-3 py-2 font-semibold">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody id="heatBody" class="text-slate-100"></tbody>
-                    </table>
-                  </div>
+                  <div id="roundsContainer" class="space-y-3"></div>
                   <div id="heatEmpty" class="hidden px-3 py-6 text-center text-xs text-slate-400">
-                    No heat rows found.
+                    No matches found.
                   </div>
                 </div>
               </section>
@@ -194,7 +180,6 @@
                           <th class="px-3 py-2 font-semibold">Rank</th>
                           <th class="px-3 py-2 font-semibold">Name</th>
                           <th class="px-3 py-2 font-semibold">Average Score (s)</th>
-                          <th class="px-3 py-2 font-semibold">Status</th>
                         </tr>
                       </thead>
                       <tbody id="leaderBody" class="text-slate-100"></tbody>
@@ -243,7 +228,7 @@
         filterBar: document.getElementById("filterBar"),
         filterChips: document.getElementById("filterChips"),
         clearFiltersBtn: document.getElementById("clearFiltersBtn"),
-        heatBody: document.getElementById("heatBody"),
+        roundsContainer: document.getElementById("roundsContainer"),
         heatEmpty: document.getElementById("heatEmpty"),
         leaderBody: document.getElementById("leaderBody"),
         leaderEmpty: document.getElementById("leaderEmpty"),
@@ -259,10 +244,7 @@
       let rawLeaderRows = [];
       let avgScoreByName = new Map();
 
-      const filters = {
-        name: null,
-        status: null,
-      };
+      let filterName = null;
 
       function setNavActive(view) {
         const base =
@@ -338,56 +320,32 @@
         return out;
       }
 
-      function matchesFilters({ name, status }) {
-        if (filters.name) {
-          if (normalizeKey(name) !== filters.name) return false;
-        }
-        if (filters.status) {
-          if (normalizeKey(status) !== filters.status) return false;
-        }
-        return true;
-      }
-
       function setFilterName(name) {
         const k = normalizeKey(name);
-        filters.name = filters.name === k ? null : k;
-        applyFiltersAndRender();
-      }
-
-      function setFilterStatus(status) {
-        const k = normalizeKey(status);
-        filters.status = filters.status === k ? null : k;
+        filterName = filterName === k ? null : k;
         applyFiltersAndRender();
       }
 
       function clearFilters() {
-        filters.name = null;
-        filters.status = null;
+        filterName = null;
         applyFiltersAndRender();
       }
 
       function renderFilterChips() {
-        const chips = [];
-        if (filters.name) chips.push({ type: "name", label: filters.name });
-        if (filters.status) chips.push({ type: "status", label: filters.status });
-
         el.filterChips.innerHTML = "";
-        el.filterBar.classList.toggle("hidden", chips.length === 0);
-        if (!chips.length) return;
+        el.filterBar.classList.toggle("hidden", !filterName);
+        if (!filterName) return;
 
-        for (const c of chips) {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className =
-            "inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-3 py-1 font-semibold text-indigo-100 ring-1 ring-indigo-500/20 hover:bg-indigo-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70";
-          btn.textContent = c.type === "name" ? `Name: ${c.label}` : `Status: ${c.label}`;
-          btn.addEventListener("click", () => {
-            if (c.type === "name") filters.name = null;
-            if (c.type === "status") filters.status = null;
-            applyFiltersAndRender();
-          });
-          el.filterChips.appendChild(btn);
-        }
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className =
+          "inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-3 py-1 font-semibold text-indigo-100 ring-1 ring-indigo-500/20 hover:bg-indigo-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70";
+        btn.textContent = `Name: ${filterName}`;
+        btn.addEventListener("click", () => {
+          filterName = null;
+          applyFiltersAndRender();
+        });
+        el.filterChips.appendChild(btn);
       }
 
       function makeCell(text, extra = "") {
@@ -395,20 +353,6 @@
         td.className = "px-3 py-2 align-middle " + extra;
         td.textContent = text;
         return td;
-      }
-
-      function badgeForStatus(status) {
-        const s = safeText(status).toLowerCase();
-        let cls = "bg-slate-500/10 text-slate-100 ring-slate-500/20";
-        if (s === "completed" || s === "winner") cls = "bg-emerald-500/10 text-emerald-100 ring-emerald-500/20";
-        else if (s === "coming" || s === "ready") cls = "bg-indigo-500/10 text-indigo-100 ring-indigo-500/20";
-        else if (s === "canceled" || s === "withdrawn" || s === "out") cls = "bg-rose-500/10 text-rose-100 ring-rose-500/20";
-        // "Live" not needed per request, but if it appears, treat as amber.
-        else if (s === "live" || s === "qualifier") cls = "bg-amber-500/10 text-amber-100 ring-amber-500/20";
-        const span = document.createElement("span");
-        span.className = "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 " + cls;
-        span.textContent = safeText(status) || "—";
-        return span;
       }
 
       function nameButton(name, { maxWClass } = {}) {
@@ -422,50 +366,65 @@
         return btn;
       }
 
-      function statusButton(status) {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.dataset.filterStatus = normalizeKey(status);
-        btn.className = "rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70";
-        btn.appendChild(badgeForStatus(status));
-        return btn;
-      }
-
-      function renderHeat(rows) {
-        el.heatBody.innerHTML = "";
-        const clean = rows.filter((r) => r.some((x) => safeText(x)));
-        el.heatCount.textContent = clean.length ? `${clean.length} row(s)` : "—";
+      function renderRounds(rows) {
+        el.roundsContainer.innerHTML = "";
+        const clean = rows.filter((r) => safeText(r[0]) && safeText(r[2]));
+        el.heatCount.textContent = clean.length ? `${clean.length} match(es)` : "—";
         if (!clean.length) {
           el.heatEmpty.classList.remove("hidden");
           return;
         }
         el.heatEmpty.classList.add("hidden");
 
+        const byRound = new Map();
         for (const r of clean) {
-          const tr = document.createElement("tr");
-          tr.className = "border-b border-slate-900/60 last:border-b-0";
+          const round = safeText(r[2]) || "?";
+          if (!byRound.has(round)) byRound.set(round, []);
+          byRound.get(round).push(r);
+        }
 
-          const nameTd = document.createElement("td");
-          nameTd.className = "px-3 py-2 align-middle max-w-[12rem]";
-          nameTd.appendChild(nameButton(r[0], { maxWClass: "max-w-[12rem]" }));
-          tr.appendChild(nameTd);
-          tr.appendChild(makeCell(safeText(r[1]) || "—", "text-slate-200"));
-          tr.appendChild(makeCell(safeText(r[2]) || "—", "text-slate-200"));
-          tr.appendChild(makeCell(safeText(r[3]) || "—", "text-slate-200"));
-          tr.appendChild(makeCell(safeText(r[4]) || "—", "font-semibold text-slate-100"));
+        const rounds = [...byRound.keys()].sort((a, b) => {
+          const na = Number.parseFloat(a);
+          const nb = Number.parseFloat(b);
+          if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+          return a.localeCompare(b);
+        });
 
-          const td = document.createElement("td");
-          td.className = "px-3 py-2";
-          td.appendChild(statusButton(r[5]));
-          tr.appendChild(td);
+        for (const round of rounds) {
+          const card = document.createElement("div");
+          card.className = "overflow-hidden rounded-xl ring-1 ring-slate-800";
+          card.innerHTML =
+            `<div class="border-b border-slate-800 bg-slate-900/50 px-4 py-2 text-sm font-semibold">Round ${round}</div>`;
 
-          el.heatBody.appendChild(tr);
+          const table = document.createElement("table");
+          table.className = "min-w-full text-left text-xs";
+          table.innerHTML =
+            `<thead class="text-slate-300"><tr class="border-b border-slate-800/80"><th class="px-3 py-2 font-semibold">Name</th><th class="px-3 py-2 font-semibold">Line</th><th class="px-3 py-2 font-semibold">Group</th><th class="px-3 py-2 font-semibold">Score (s)</th></tr></thead>`;
+          const tbody = document.createElement("tbody");
+          tbody.className = "text-slate-100";
+
+          for (const r of byRound.get(round)) {
+            const tr = document.createElement("tr");
+            tr.className = "border-b border-slate-900/60 last:border-b-0";
+            const nameTd = document.createElement("td");
+            nameTd.className = "px-3 py-2 align-middle max-w-[12rem]";
+            nameTd.appendChild(nameButton(r[0], { maxWClass: "max-w-[12rem]" }));
+            tr.appendChild(nameTd);
+            tr.appendChild(makeCell(safeText(r[1]) || "—", "text-slate-200"));
+            tr.appendChild(makeCell(safeText(r[3]) || "—", "text-slate-200"));
+            tr.appendChild(makeCell(safeText(r[4]) || "—", "font-semibold text-slate-100"));
+            tbody.appendChild(tr);
+          }
+
+          table.appendChild(tbody);
+          card.appendChild(table);
+          el.roundsContainer.appendChild(card);
         }
       }
 
       function renderLeaderboard(rows) {
         el.leaderBody.innerHTML = "";
-        const clean = rows.filter((r) => r.some((x) => safeText(x)));
+        const clean = rows.filter((r) => safeText(r[0]));
         el.leaderCount.textContent = clean.length ? `${clean.length} row(s)` : "—";
         if (!clean.length) {
           el.leaderEmpty.classList.remove("hidden");
@@ -501,11 +460,6 @@
             )
           );
 
-          const td = document.createElement("td");
-          td.className = "px-3 py-2";
-          td.appendChild(statusButton(r[2]));
-          tr.appendChild(td);
-
           el.leaderBody.appendChild(tr);
         }
       }
@@ -513,25 +467,18 @@
       function applyFiltersAndRender() {
         renderFilterChips();
 
-        const heat = rawHeatRows.filter((r) =>
-          matchesFilters({ name: r?.[0], status: r?.[5] })
-        );
-        const leader = rawLeaderRows.filter((r) =>
-          matchesFilters({ name: r?.[0], status: r?.[2] })
-        );
-
-        renderHeat(heat);
-        renderLeaderboard(leader);
+        const matchName = (r) => !filterName || normalizeKey(r?.[0]) === filterName;
+        renderRounds(rawHeatRows.filter(matchName));
+        renderLeaderboard(rawLeaderRows.filter(matchName));
       }
 
       function splitTwoTables(matrix) {
-        // Expect columns: [0..5] left table, [6] empty separator, [7..9] right table
         const heat = [];
         const leader = [];
         for (const row of matrix) {
           if (!row || !row.length) continue;
-          heat.push([row[0], row[1], row[2], row[3], row[4], row[5]]);
-          leader.push([row[7], row[8], row[9]]);
+          heat.push([row[0], row[1], row[2], row[3], row[4]]);
+          leader.push([row[6], row[7]]);
         }
         return { heat, leader };
       }
@@ -623,14 +570,11 @@
       el.refreshBtn.addEventListener("click", () => loadView(currentView, { reason: "manual" }));
       el.clearFiltersBtn.addEventListener("click", clearFilters);
 
-      // Event delegation: click-to-filter on names/statuses in both tables.
       const onFilterClick = (e) => {
-        const t = e.target?.closest?.("[data-filter-name],[data-filter-status]");
-        if (!t) return;
-        if (t.dataset.filterName) setFilterName(t.dataset.filterName);
-        if (t.dataset.filterStatus) setFilterStatus(t.dataset.filterStatus);
+        const t = e.target?.closest?.("[data-filter-name]");
+        if (t?.dataset.filterName) setFilterName(t.dataset.filterName);
       };
-      el.heatBody.addEventListener("click", onFilterClick);
+      el.roundsContainer.addEventListener("click", onFilterClick);
       el.leaderBody.addEventListener("click", onFilterClick);
 
       if (!location.hash) location.hash = "#/swimming";
